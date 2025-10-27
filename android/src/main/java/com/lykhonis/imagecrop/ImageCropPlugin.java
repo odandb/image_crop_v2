@@ -197,7 +197,7 @@ public final class ImageCropPlugin implements FlutterPlugin, ActivityAware, Meth
             canvas.drawBitmap(srcBitmap, srcRect, dstRect, paint);
 
             try {
-                final File dstFile = createTemporaryImageFile();
+                final File dstFile = createTemporaryImageFile(path);
                 compressBitmap(dstBitmap, dstFile);
                 ui(() -> result.success(dstFile.getAbsolutePath()));
             } catch (final IOException e) {
@@ -237,7 +237,7 @@ public final class ImageCropPlugin implements FlutterPlugin, ActivityAware, Meth
             }
 
             try {
-                final File dstFile = createTemporaryImageFile();
+                final File dstFile = createTemporaryImageFile(path);
                 compressBitmap(bitmap, dstFile);
                 copyExif(srcFile, dstFile);
                 ui(() -> result.success(dstFile.getAbsolutePath()));
@@ -251,7 +251,12 @@ public final class ImageCropPlugin implements FlutterPlugin, ActivityAware, Meth
 
     private void compressBitmap(Bitmap bitmap, File file) throws IOException {
         try (OutputStream outputStream = new FileOutputStream(file)) {
-            boolean compressed = bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+            boolean compressed;
+            if (file.getName().toLowerCase().endsWith("png")) {
+                compressed = bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+            } else {
+                compressed = bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+            }
             if (!compressed) {
                 throw new IOException("Failed to compress bitmap into JPEG");
             }
@@ -326,13 +331,17 @@ public final class ImageCropPlugin implements FlutterPlugin, ActivityAware, Meth
         return PackageManager.PERMISSION_DENIED;
     }
 
-    private File createTemporaryImageFile() throws IOException {
+    private File createTemporaryImageFile(String previousPath) throws IOException {
         if (activity == null) {
             throw new IOException("Activity is null, cannot create temporary file");
         }
         File directory = activity.getCacheDir();
         String name = "image_crop_" + UUID.randomUUID().toString();
-        return File.createTempFile(name, ".jpg", directory);
+        if (previousPath.toLowerCase().endsWith("png")) {
+            return File.createTempFile(name, ".png", directory);
+        } else {
+            return File.createTempFile(name, ".jpg", directory);
+        }
     }
 
     private ImageOptions decodeImageOptions(String path) {
