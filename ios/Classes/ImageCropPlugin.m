@@ -120,7 +120,7 @@
             croppedImage = scaledImage;
         }
         
-        NSURL* croppedUrl = [self createTemporaryImageUrl];
+        NSURL* croppedUrl = [self createTemporaryImageUrl:url];
         bool saved = [self saveImage:croppedImage url:croppedUrl];
         CFRelease(croppedImage);
         
@@ -183,7 +183,7 @@
             return;
         }
 
-        NSURL* sampleUrl = [self createTemporaryImageUrl];
+        NSURL* sampleUrl = [self createTemporaryImageUrl:url];
         bool saved = [self saveImage:sampleImage url:sampleUrl];
         CFRelease(sampleImage);
         
@@ -238,7 +238,14 @@
 }
 
 - (bool)saveImage:(CGImageRef)image url:(NSURL*)url {
-    CGImageDestinationRef destination = CGImageDestinationCreateWithURL((CFURLRef) url, kUTTypeJPEG, 1, NULL);
+    CGImageDestinationRef destination;
+    
+    if (url.pathExtension != NULL && [url.pathExtension isEqualToString:@"png"]) {
+		  destination = CGImageDestinationCreateWithURL((CFURLRef) url, kUTTypePNG, 1, NULL);
+	  } else {
+		  destination = CGImageDestinationCreateWithURL((CFURLRef) url, kUTTypeJPEG, 1, NULL);
+	  }
+    
     CGImageDestinationAddImage(destination, image, NULL);
     
     bool finilized = CGImageDestinationFinalize(destination);
@@ -247,10 +254,14 @@
     return finilized;
 }
 
-- (NSURL*)createTemporaryImageUrl {
+- (NSURL*)createTemporaryImageUrl:(NSURL *)previousUrl {
+	  NSString *extension = @".jpg";
+	  if (previousUrl.pathExtension != NULL && [previousUrl.pathExtension isEqualToString:@"png"]) {
+		  extension = @".png";
+	  }
     NSString* temproraryDirectory = NSTemporaryDirectory();
     NSString* guid = [[NSProcessInfo processInfo] globallyUniqueString];
-    NSString* sampleName = [[@"image_crop_" stringByAppendingString:guid] stringByAppendingString:@".jpg"];
+    NSString* sampleName = [[@"image_crop_" stringByAppendingString:guid] stringByAppendingString:extension];
     NSString* samplePath = [temproraryDirectory stringByAppendingPathComponent:sampleName];
     return [NSURL fileURLWithPath:samplePath];
 }
